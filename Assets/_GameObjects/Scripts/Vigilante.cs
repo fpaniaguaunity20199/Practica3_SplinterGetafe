@@ -17,7 +17,6 @@ public class Vigilante : MonoBehaviour
     [Header("If true -> Los puntos de vigilancia se eligen al azar")]
     public bool randomRoute;//If true -> Los puntos de vigilancia se eligen al azar
 
-    // Start is called before the first frame update
     void Start()
     {
         nma = GetComponent<NavMeshAgent>();
@@ -25,14 +24,11 @@ public class Vigilante : MonoBehaviour
         nma.SetDestination(puntosPatrullaje[destinationID].position);
         Walk();
     }
-
     private void Walk()
     {
         animator.SetBool("Walking", true);
         estado = Estado.Walking;
     }
-
-    // Update is called once per frame
     void Update()
     {
         if (estado == Estado.Walking && nma.remainingDistance==0)
@@ -44,13 +40,16 @@ public class Vigilante : MonoBehaviour
             estado = Estado.Idle;
         }
     }
-
+    public void SetDestination(Vector3 position)
+    {
+        nextDestination = position;
+        ChangeDestination();
+    }
     private void ChangeDestination()
     {
         nma.SetDestination(nextDestination);
         Walk();
     }
-
     private Vector3 GetNextDestination()
     {
         destinationID++;
