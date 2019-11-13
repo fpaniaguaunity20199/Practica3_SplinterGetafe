@@ -5,6 +5,23 @@ using UnityEngine.AI;
 
 public class Vigilante : MonoBehaviour
 {
+    public Transform viewPoint;
+    private GameObject player;
+    private Transform playerDetectionPoint;
+    public TextMesh textoInformativo;
+    public LayerMask mascaraDeteccion;
+
+    [Range(1,10)]
+    public float viewDistance;
+    [Range(10, 80)]
+    public float viewAngle;
+    [Range(0, 20)]
+    public float listenDistanceSigil;
+    [Range(0, 20)]
+    public float listenDistanceWalk;
+    [Range(0, 20)]
+    public float listenDistanceRun;
+
     public enum Estado { Idle, Walking, Running, Celebrating }
     public Estado estado = Estado.Idle;
     private NavMeshAgent nma;
@@ -19,6 +36,8 @@ public class Vigilante : MonoBehaviour
 
     void Start()
     {
+        player = GameObject.Find("Infiltrado");
+        playerDetectionPoint = GameObject.Find("PlayerDetectionPoint").transform;
         nma = GetComponent<NavMeshAgent>();
         animator = GetComponent<Animator>();
         nma.SetDestination(puntosPatrullaje[destinationID].position);
@@ -39,6 +58,8 @@ public class Vigilante : MonoBehaviour
             Invoke("ChangeDestination", delayVigilante);
             estado = Estado.Idle;
         }
+        PlayerDetection();
+        PlayerDetectionBySound();
     }
     public void SetDestination(Vector3 position)
     {
@@ -68,5 +89,42 @@ public class Vigilante : MonoBehaviour
         } while (destinoAleatorio == destinationID);
         destinationID = destinoAleatorio;
         return puntosPatrullaje[destinationID].position;
+    }
+    private void PlayerDetectionBySound()
+    {
+        float distanceToPlayer = Vector3.Distance(viewPoint.position, playerDetectionPoint.position);
+        if (distanceToPlayer <= listenDistanceWalk)
+        {
+            SetDestination(player.transform.position);
+        }
+    }
+    private void PlayerDetection()
+    {
+        float distanceToPlayer = Vector3.Distance(viewPoint.position, playerDetectionPoint.position);
+        float viewAngleToPlayer = Vector3.Angle(viewPoint.forward, playerDetectionPoint.position - viewPoint.position);
+        textoInformativo.text = distanceToPlayer.ToString() + ":" + viewAngleToPlayer;
+        if (distanceToPlayer < viewDistance && viewAngleToPlayer < viewAngle)
+        {
+            IntentarMatar();
+        }
+    }
+    private void IntentarMatar()
+    {
+        RaycastHit hit;
+        Ray ray = new Ray(viewPoint.position, playerDetectionPoint.position - viewPoint.position);
+        Debug.DrawRay(viewPoint.position, playerDetectionPoint.position - viewPoint.position, Color.red);
+        if (Physics.Raycast(ray, out hit, viewDistance, mascaraDeteccion))
+        {
+            print(hit.transform.gameObject.name);
+            if (hit.transform.gameObject.GetComponentInParent<Infiltrado>()!=null)
+            {
+                Matar();
+            }
+        }
+        
+    }
+    private void Matar()
+    {
+        player.GetComponent<Infiltrado>().Morir();
     }
 }
