@@ -8,8 +8,9 @@ public class Vigilante : MonoBehaviour
     public Transform viewPoint;
     private GameObject player;
     private Transform playerDetectionPoint;
-    public TextMesh textoInformativo;
+    //public TextMesh textoInformativo;
     public LayerMask mascaraDeteccion;
+    public GameObject exclamacion;
 
     [Range(1,10)]
     public float viewDistance;
@@ -22,7 +23,7 @@ public class Vigilante : MonoBehaviour
     [Range(0, 20)]
     public float listenDistanceRun;
 
-    public enum Estado { Idle, Walking, Running, Celebrating }
+    public enum Estado { Idle, Walking, Celebrating, Obsessed }
     public Estado estado = Estado.Idle;
     private NavMeshAgent nma;
     private Animator animator;
@@ -50,13 +51,14 @@ public class Vigilante : MonoBehaviour
     }
     void Update()
     {
-        if (estado == Estado.Walking && nma.remainingDistance==0)
+        if (estado != Estado.Idle && nma.remainingDistance==0)
         {
             animator.SetBool("Walking", false);
             nextDestination = randomRoute ? GetRandomDestination() : GetNextDestination();
             transform.LookAt(nextDestination);
             Invoke("ChangeDestination", delayVigilante);
             estado = Estado.Idle;
+            exclamacion.SetActive(false);
         }
         PlayerDetection();
         PlayerDetectionBySound();
@@ -92,17 +94,32 @@ public class Vigilante : MonoBehaviour
     }
     private void PlayerDetectionBySound()
     {
+        if (estado == Estado.Obsessed || player.GetComponent<Infiltrado>().estado == Infiltrado.Estado.Idle)
+        {
+            return;
+        }
         float distanceToPlayer = Vector3.Distance(viewPoint.position, playerDetectionPoint.position);
-        if (distanceToPlayer <= listenDistanceWalk)
+
+        if (player.GetComponent<Infiltrado>().estado == Infiltrado.Estado.Walking && 
+            distanceToPlayer <= listenDistanceWalk)
         {
             SetDestination(player.transform.position);
+            estado = Estado.Obsessed;
+            exclamacion.SetActive(true);
+        }
+        if (player.GetComponent<Infiltrado>().estado == Infiltrado.Estado.Stealthing &&
+            distanceToPlayer <= listenDistanceSigil)
+        {
+            SetDestination(player.transform.position);
+            estado = Estado.Obsessed;
+            exclamacion.SetActive(true);
         }
     }
     private void PlayerDetection()
     {
         float distanceToPlayer = Vector3.Distance(viewPoint.position, playerDetectionPoint.position);
         float viewAngleToPlayer = Vector3.Angle(viewPoint.forward, playerDetectionPoint.position - viewPoint.position);
-        textoInformativo.text = distanceToPlayer.ToString() + ":" + viewAngleToPlayer;
+        //textoInformativo.text = distanceToPlayer.ToString() + ":" + viewAngleToPlayer;
         if (distanceToPlayer < viewDistance && viewAngleToPlayer < viewAngle)
         {
             IntentarMatar();
@@ -115,7 +132,6 @@ public class Vigilante : MonoBehaviour
         Debug.DrawRay(viewPoint.position, playerDetectionPoint.position - viewPoint.position, Color.red);
         if (Physics.Raycast(ray, out hit, viewDistance, mascaraDeteccion))
         {
-            print(hit.transform.gameObject.name);
             if (hit.transform.gameObject.GetComponentInParent<Infiltrado>()!=null)
             {
                 Matar();

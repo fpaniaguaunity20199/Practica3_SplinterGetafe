@@ -5,8 +5,11 @@ using UnityEngine.AI;
 
 public class Infiltrado : MonoBehaviour
 {
+    public enum Estado { Idle, Walking, Running, Stealthing}
+    public Estado estado = Estado.Idle;
     public GameObject prefab;
     public LayerMask layerMask;
+    public GameObject targetPoint;
     private NavMeshAgent nma;
     private Animator animator;
     private void Start()
@@ -25,27 +28,46 @@ public class Infiltrado : MonoBehaviour
         {
             animator.SetBool("Idle", true);
             animator.SetBool("Walking", false);
+            estado = Estado.Idle;
+        }
+        if (Input.GetKeyDown(KeyCode.LeftShift) && estado!=Estado.Idle)
+        {
+            //Activo sigilo
+            animator.SetBool("WalkingSigiloso", true);
+            nma.speed = 0.50f;
+            estado = Estado.Stealthing;
+        }
+        if (Input.GetKeyUp(KeyCode.LeftShift))
+        {
+            //Desactivo sigilio
+            animator.SetBool("WalkingSigiloso", false);
+            nma.speed = 2.5f;
+            if (estado != Estado.Idle)
+            {
+                estado = Estado.Walking;
+            }
         }
     }
-
     private void SetDestination()
     {
         Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
         RaycastHit hit;
-        //if (Physics.Raycast(ray, out hit, Mathf.Infinity, layerMask))
-        if (Physics.Raycast(ray, out hit))
+        if (Physics.Raycast(ray, out hit, Mathf.Infinity, layerMask))
+        //if (Physics.Raycast(ray, out hit))
         {
-            if (hit.transform.name == "Suelo")//Si se usa layerMask, quitar esta condicion
+            //if (hit.transform.name == "Suelo")//Si se usa layerMask, quitar esta condicion
             {
-                //Instantiate(prefab, hit.point, Quaternion.identity);
+                targetPoint.transform.position = hit.point;//Dibujamos el circulito
+                targetPoint.transform.Translate(Vector3.back * 0.01f);//Lo subimos un poco para que no haga overlap
+                targetPoint.transform.rotation = Quaternion.FromToRotation(Vector3.back, hit.normal);
+                //Debug.DrawRay(hit.point, hit.normal, Color.red, 10f);
                 nma.destination = hit.point;
                 animator.SetBool("Idle", false);
                 animator.SetBool("Walking", true);
-                print("AQUI");
+                estado = Estado.Walking;
             }
         }
     }
-
     public void Morir()
     {
         ActivarRagdoll();
